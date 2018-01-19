@@ -297,10 +297,10 @@ int igh_exchange(void)
 				EC_WRITE_U8(domain1_pd + output_list[i].offset, *((char*)output_list[i].variable));
 				break;
 			case 16 :
-				EC_WRITE_U16(domain1_pd + output_list[i].offset, *((char*)output_list[i].variable));
+				EC_WRITE_U16(domain1_pd + output_list[i].offset, *((short*)output_list[i].variable));
 				break;
 			case 32 :
-				EC_WRITE_U32(domain1_pd + output_list[i].offset, *((char*)output_list[i].variable));
+				EC_WRITE_U32(domain1_pd + output_list[i].offset, *((int*)output_list[i].variable));
 				break;
 		}
 	}
