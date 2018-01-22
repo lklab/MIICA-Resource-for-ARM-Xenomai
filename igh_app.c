@@ -51,13 +51,13 @@ int io_exchange(void)
 {
 	int ret;
 
-	cia402_statemachine(cia402_node_list, cia402_node_count);
+	cia402_publish(cia402_node_list, cia402_node_count);
 
 	ret = igh_exchange();
 	if(ret != 0)
 		return ret;
 
-	cia402_get_power_state(cia402_node_list, cia402_node_count);
+	cia402_retrieve(cia402_node_list, cia402_node_count);
 
 	return 0;
 }

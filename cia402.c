@@ -12,6 +12,8 @@
 
 #define PW_CTL_NAME "power"
 #define PW_FDB_NAME "enabled"
+#define POS_TGT_NAME "target"
+#define POS_FCT_NAME "factor"
 
 /* From CiA402, page 27
 
@@ -76,7 +78,7 @@ int cia402_get_node_list(igh_slave_t* slave_list, int slave_count,
 	*cia402_node_count = 0;
 	*cia402_node_list = NULL;
 
-	/* count CIA402 nodes */
+	/* count CiA402 nodes */
 	for(i = 0; i < slave_count; i++)
 	{
 		if(is_cia402_node(&slave_list[i]))
@@ -87,7 +89,7 @@ int cia402_get_node_list(igh_slave_t* slave_list, int slave_count,
 	*cia402_node_list = (cia402_node_t*)malloc(sizeof(cia402_node_t) * node_count);
 	memset(*cia402_node_list, 0, sizeof(cia402_node_t) * node_count);
 
-	/* initialize CIA402 nodes */
+	/* initialize CiA402 nodes */
 	j = 0;
 	for(i = 0; i < slave_count; i++)
 	{
@@ -98,6 +100,7 @@ int cia402_get_node_list(igh_slave_t* slave_list, int slave_count,
 			sprintf((*cia402_node_list)[j].cw_address, "%d:0x6040:0x0", i);
 			sprintf((*cia402_node_list)[j].sw_address, "%d:0x6041:0x0", i);
 			sprintf((*cia402_node_list)[j].mo_address, "%d:0x6060:0x0", i);
+			sprintf((*cia402_node_list)[j].tp_address, "%d:0x607a:0x0", i);
 			j++;
 		}
 	}
@@ -120,18 +123,18 @@ int cia402_get_mapping_list(cia402_node_t* cia402_node_list, int cia402_node_cou
 	io_mapping_info_t* mapping_list, int mapping_count,
 	io_mapping_info_t** cia402_mapping_list, int* cia402_mapping_count)
 {
-	int i, j, index;
+	int i, j, k, index;
 	int position;
 	char buffer[1023];
 
 	*cia402_mapping_count = cia402_node_count + mapping_count;
 	*cia402_mapping_list = (io_mapping_info_t*)malloc(sizeof(io_mapping_info_t) * (cia402_node_count + mapping_count));
 
-	for(i = 0; i < mapping_count; i++)
+	for(i = 0, k = 0; i < mapping_count; i++, k++)
 	{
 		sscanf(mapping_list[i].network_addr, "%d:%s", &position, buffer);
 
-		/* power control mapping information changed to control word */
+		/* power control mapping info is changed to control word */
 		if(!strcmp(buffer, PW_CTL_NAME))
 		{
 			index = get_index_from_position(cia402_node_list, cia402_node_count, position);
@@ -143,12 +146,12 @@ int cia402_get_mapping_list(cia402_node_t* cia402_node_list, int cia402_node_cou
 			}
 
 			cia402_node_list[index].power_control = (int*)mapping_list[i].model_addr;
-			(*cia402_mapping_list)[i].model_addr = &(cia402_node_list[index].control_word);
-			(*cia402_mapping_list)[i].size = sizeof(int);
-			(*cia402_mapping_list)[i].network_addr = cia402_node_list[index].cw_address;
-			(*cia402_mapping_list)[i].direction = 0;
+			(*cia402_mapping_list)[k].model_addr = &(cia402_node_list[index].control_word);
+			(*cia402_mapping_list)[k].size = sizeof(int);
+			(*cia402_mapping_list)[k].network_addr = cia402_node_list[index].cw_address;
+			(*cia402_mapping_list)[k].direction = 0;
 		}
-		/* power feedback mapping information changed to status word */
+		/* power feedback mapping info is changed to status word */
 		else if(!strcmp(buffer, PW_FDB_NAME))
 		{
 			index = get_index_from_position(cia402_node_list, cia402_node_count, position);
@@ -160,10 +163,42 @@ int cia402_get_mapping_list(cia402_node_t* cia402_node_list, int cia402_node_cou
 			}
 
 			cia402_node_list[index].power_feedback = (int*)mapping_list[i].model_addr;
-			(*cia402_mapping_list)[i].model_addr = &(cia402_node_list[index].status_word);
-			(*cia402_mapping_list)[i].size = sizeof(int);
-			(*cia402_mapping_list)[i].network_addr = cia402_node_list[index].sw_address;
-			(*cia402_mapping_list)[i].direction = 1;
+			(*cia402_mapping_list)[k].model_addr = &(cia402_node_list[index].status_word);
+			(*cia402_mapping_list)[k].size = sizeof(int);
+			(*cia402_mapping_list)[k].network_addr = cia402_node_list[index].sw_address;
+			(*cia402_mapping_list)[k].direction = 1;
+		}
+		/* scaled target position info is changed to raw target position */
+		else if(!strcmp(buffer, POS_TGT_NAME))
+		{
+			index = get_index_from_position(cia402_node_list, cia402_node_count, position);
+			if(index == -1)
+			{
+				printf("EtherCAT %d slave is not CiA402 node!\n", position);
+				cia402_free_mapping_list(cia402_mapping_list);
+				return 1;
+			}
+
+			cia402_node_list[index].scaled_target = (int*)mapping_list[i].model_addr;
+			(*cia402_mapping_list)[k].model_addr = &(cia402_node_list[index].target_position);
+			(*cia402_mapping_list)[k].size = sizeof(int);
+			(*cia402_mapping_list)[k].network_addr = cia402_node_list[index].tp_address;
+			(*cia402_mapping_list)[k].direction = 0;
+		}
+		/* target position scale factor info is stored to CiA402 structure */
+		else if(!strcmp(buffer, POS_FCT_NAME))
+		{
+			index = get_index_from_position(cia402_node_list, cia402_node_count, position);
+			if(index == -1)
+			{
+				printf("EtherCAT %d slave is not CiA402 node!\n", position);
+				cia402_free_mapping_list(cia402_mapping_list);
+				return 1;
+			}
+
+			cia402_node_list[index].scale_factor = (double*)mapping_list[i].model_addr;
+			(*cia402_mapping_count)--;
+			k--;
 		}
 		/* other mapping info is copied as it is */
 		else
@@ -171,13 +206,12 @@ int cia402_get_mapping_list(cia402_node_t* cia402_node_list, int cia402_node_cou
 	}
 
 	/* setting up mapping infomation to mode of operation */
-	for(j = 0; j < cia402_node_count; j++)
+	for(j = 0; j < cia402_node_count; j++, k++)
 	{
-		(*cia402_mapping_list)[i].model_addr = &(cia402_node_list[j].mode_of_operation);
-		(*cia402_mapping_list)[i].size = sizeof(int);
-		(*cia402_mapping_list)[i].network_addr = cia402_node_list[j].mo_address;
-		(*cia402_mapping_list)[i].direction = 0;
-		i++;
+		(*cia402_mapping_list)[k].model_addr = &(cia402_node_list[j].mode_of_operation);
+		(*cia402_mapping_list)[k].size = sizeof(int);
+		(*cia402_mapping_list)[k].network_addr = cia402_node_list[j].mo_address;
+		(*cia402_mapping_list)[k].direction = 0;
 	}
 
 	return 0;
@@ -194,15 +228,21 @@ int cia402_free_mapping_list(io_mapping_info_t** cia402_mapping_list)
 	return 0;
 }
 
-int cia402_statemachine(cia402_node_t* cia402_node_list, int cia402_node_count)
+int cia402_publish(cia402_node_t* cia402_node_list, int cia402_node_count)
 {
 	int i;
 	int power, cw;
 
 	for(i = 0; i < cia402_node_count; i++)
 	{
-		power = (cia402_node_list[i].status_word & SW_VoltageEnabled)
-			&& *(cia402_node_list[i].power_control);
+		// power command
+		if(cia402_node_list[i].power_control == NULL)
+			power = 0;
+		else
+		{
+			power = (cia402_node_list[i].status_word & SW_VoltageEnabled)
+				&& *(cia402_node_list[i].power_control);
+		}
 		cw = cia402_node_list[i].control_word;
 
 		// CiA402 statemachine (copied from plc_cia402node.c in beremiz (180119))
@@ -237,17 +277,30 @@ int cia402_statemachine(cia402_node_t* cia402_node_list, int cia402_node_count)
 				break;
 		}
 		cia402_node_list[i].control_word = cw;
+
+		// cacluate raw target position
+		if(cia402_node_list[i].scaled_target != NULL)
+		{
+			if(cia402_node_list[i].scale_factor == NULL)
+				cia402_node_list[i].target_position = *(cia402_node_list[i].scaled_target);
+			else
+				cia402_node_list[i].target_position =
+					(int)((double)*(cia402_node_list[i].scaled_target) * *(cia402_node_list[i].scale_factor));
+		}
 	}
 
 	return 0;
 }
 
-int cia402_get_power_state(cia402_node_t* cia402_node_list, int cia402_node_count)
+int cia402_retrieve(cia402_node_t* cia402_node_list, int cia402_node_count)
 {
 	int i;
 
 	for(i = 0; i < cia402_node_count; i++)
 	{
+		if(cia402_node_list[i].power_feedback == NULL)
+			continue;
+
 		int fsa = FSAFromStatusWord(cia402_node_list[i].status_word);
 		*(cia402_node_list[i].power_feedback) = fsa == OperationEnabled;
 	}
