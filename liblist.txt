@@ -1,2 +1,0 @@
-default=native xenomai pthread
-IgH EtherCAT Master=ethercat_rtdm rtdm igh

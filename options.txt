@@ -1,0 +1,3 @@
+def=-D_GNU_SOURCE -D_REENTRANT -Wall -pipe -D__XENO__
+default=native xenomai
+IgH EtherCAT Master=igh pthread ethercat_rtdm rtdm
