@@ -202,7 +202,7 @@ int cia402_get_mapping_list(cia402_node_t* cia402_node_list, int cia402_node_cou
 		}
 		/* other mapping info is copied as it is */
 		else
-			memcpy(&((*cia402_mapping_list)[i]), &(mapping_list[i]), sizeof(io_mapping_info_t));
+			memcpy(&((*cia402_mapping_list)[k]), &(mapping_list[i]), sizeof(io_mapping_info_t));
 	}
 
 	/* setting up mapping infomation to mode of operation */
