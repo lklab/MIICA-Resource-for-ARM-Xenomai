@@ -11,7 +11,7 @@
 #define CW_INDEX 0x6040
 
 #define PW_CTL_NAME "power"
-#define PW_FDB_NAME "enabled"
+#define PW_FDB_NAME "feedback"
 #define POS_TGT_NAME "target"
 #define POS_FCT_NAME "factor"
 
