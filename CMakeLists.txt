@@ -6,4 +6,5 @@ link_libraries(native xenomai pthread ethercat_rtdm rtdm)
 
 add_library(os STATIC os.c)
 add_library(igh STATIC igh_app.c cia402.c igh.c)
-
+add_executable(PLC_APP main.c model.c uppaal.c os.c igh_app.c cia402.c igh.c)
+add_executable(TEST main2.c)
